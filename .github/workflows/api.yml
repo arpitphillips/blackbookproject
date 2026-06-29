@@ -1,0 +1,71 @@
+name: API CI
+
+# Typechecks and tests the discovery API against a freshly built + seeded
+# database (unit tests run regardless; integration tests use the DB).
+on:
+  pull_request:
+    paths:
+      - 'services/api/**'
+      - 'db/**'
+      - '.github/workflows/api.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'services/api/**'
+      - 'db/**'
+      - '.github/workflows/api.yml'
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: Typecheck & test
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: blackbook
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d blackbook"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/blackbook
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: services/api/package-lock.json
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+
+      - name: Build & seed database
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/build.sql
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -f db/seed.sql
+
+      - name: Install dependencies
+        working-directory: services/api
+        run: npm ci
+
+      - name: Typecheck
+        working-directory: services/api
+        run: npm run typecheck
+
+      - name: Test (unit + integration)
+        working-directory: services/api
+        run: npm test

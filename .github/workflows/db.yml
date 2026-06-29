@@ -1,0 +1,73 @@
+name: Database CI
+
+# Validates the schema the way it is validated locally: build every migration,
+# load the seed, prove the seed is idempotent, and assert structural invariants.
+on:
+  pull_request:
+    paths:
+      - 'db/**'
+      - '.github/workflows/db.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'db/**'
+      - '.github/workflows/db.yml'
+  workflow_dispatch:
+
+jobs:
+  schema:
+    name: Build, seed & verify schema
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: blackbook
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d blackbook"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+
+    env:
+      PGHOST: 127.0.0.1
+      PGPORT: 5432
+      PGUSER: postgres
+      PGPASSWORD: postgres
+      PGDATABASE: blackbook
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends postgresql-client
+          psql --version
+
+      - name: Build schema
+        run: psql -v ON_ERROR_STOP=1 -f db/build.sql
+
+      - name: Load seed data
+        run: psql -v ON_ERROR_STOP=1 -f db/seed.sql
+
+      - name: Verify seed is idempotent (re-run)
+        run: psql -v ON_ERROR_STOP=1 -f db/seed.sql
+
+      - name: Assert schema invariants
+        run: psql -v ON_ERROR_STOP=1 -f db/ci/checks.sql
+
+      - name: Report schema summary
+        run: |
+          psql -v ON_ERROR_STOP=1 -At <<'SQL'
+          SELECT 'tables  = ' || count(*) FROM information_schema.tables
+            WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
+          SELECT 'enums   = ' || count(*) FROM pg_type WHERE typtype = 'e';
+          SELECT 'indexes = ' || count(*) FROM pg_indexes WHERE schemaname = 'public';
+          SELECT 'fkeys   = ' || count(*) FROM pg_constraint WHERE contype = 'f';
+          SQL

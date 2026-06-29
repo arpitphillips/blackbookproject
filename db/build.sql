@@ -23,4 +23,8 @@
 \i db/migrations/008_future.sql
 \echo '== 009 supporting indexes =='
 \i db/migrations/009_supporting_indexes.sql
+\echo '== 010 read-model views =='
+\i db/migrations/010_views.sql
+\echo '== 011 onboarding intake =='
+\i db/migrations/011_onboarding.sql
 \echo '== schema build complete =='
