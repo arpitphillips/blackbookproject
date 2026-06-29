@@ -13,16 +13,29 @@ forms.app stack via migration, with no Airtable-specific assumptions.
 
 ```
 db/
-  migrations/        9 ordered DDL files (001 → 009)
+  migrations/        10 ordered DDL files (001 → 010, incl. read-model views)
   build.sql          builds the whole schema in dependency order
   seed.sql           minimal, idempotent reference + demo data
+  ci/checks.sql      structural invariants asserted in CI
   README.md          how to build, verify, and extend the schema
+services/
+  api/               TypeScript/Node discovery API (Fastify + pg)
 docs/
   ARCHITECTURE.md    how the schema realizes the 5-layer platform spec
   DATA_MODEL.md      table-by-table data dictionary (55 tables)
   ERD.md             entity-relationship diagrams (Mermaid)
   MIGRATION.md       Airtable → PostgreSQL migration strategy
+  DECISIONS.md       architectural decision log
+.github/workflows/   CI: schema build/seed/verify + API typecheck/test
 ```
+
+## Discovery API
+
+The first application layer — the spec's "primary experience" — lives in
+[`services/api`](services/api): a TypeScript/Node service (Fastify + `pg`) that
+exposes structured directory search, faceted filtering, and profile detail over
+the schema, recording every query to `search_logs`/`search_impressions` for the
+analytics and recommendation layers. See [services/api/README.md](services/api/README.md).
 
 ## Quick start
 
