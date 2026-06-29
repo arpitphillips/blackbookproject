@@ -13,21 +13,31 @@ forms.app stack via migration, with no Airtable-specific assumptions.
 
 ```
 db/
-  migrations/        10 ordered DDL files (001 → 010, incl. read-model views)
+  migrations/        11 ordered DDL files (001 → 011, incl. views + intake)
   build.sql          builds the whole schema in dependency order
   seed.sql           minimal, idempotent reference + demo data
   ci/checks.sql      structural invariants asserted in CI
+  supabase/rls.sql   Supabase-only row-level-security (anon insert/read)
   README.md          how to build, verify, and extend the schema
 services/
   api/               TypeScript/Node discovery API (Fastify + pg)
+web/                 Alpha frontend: React onboarding form → Supabase
 docs/
   ARCHITECTURE.md    how the schema realizes the 5-layer platform spec
   DATA_MODEL.md      table-by-table data dictionary (55 tables)
   ERD.md             entity-relationship diagrams (Mermaid)
   MIGRATION.md       Airtable → PostgreSQL migration strategy
   DECISIONS.md       architectural decision log
-.github/workflows/   CI: schema build/seed/verify + API typecheck/test
+.github/workflows/   CI: schema, API, and web checks
 ```
+
+## Alpha frontend
+
+[`web/`](web) is the alpha: a branded **professional onboarding form** (Vite +
+React + TypeScript) that writes submissions directly to **Supabase** (hosted
+PostgreSQL running this repo's schema). The browser uses the public anon key
+under row-level security — it can submit onboarding data and read taxonomy for
+dropdowns, nothing else. See [web/README.md](web/README.md) for Supabase setup.
 
 ## Discovery API
 

@@ -34,3 +34,26 @@ recommendation scorer) we will use **TypeScript on Node.js**. Rationale:
 end-to-end type safety shared with a future TS frontend, a broad ecosystem, and
 mature typed PostgreSQL access. Specific libraries (query builder / driver,
 web framework) will be chosen when the first service is scaffolded.
+
+## D4 — Alpha: Supabase as the operational store + a React onboarding form
+
+**Status:** Accepted
+
+For the alpha the deliverable is a frontend with an onboarding form whose data
+lands in a database. We chose **Supabase** over Airtable because Supabase *is*
+hosted PostgreSQL, so the existing `db/` schema becomes the operational database
+as-is, and the browser can write securely with the public **anon** key under
+row-level security — no server required for the alpha.
+
+- The form (`web/`, Vite + React + TS) writes to `public.onboarding_submissions`
+  (migration 011): a denormalized, FK-free intake table. A back-office step
+  later promotes reviewed submissions into `users` + `professional_profiles`.
+- RLS (`db/supabase/rls.sql`, applied only on Supabase) grants anon **INSERT**
+  on submission data columns (not `status`) and **SELECT** on active taxonomy
+  for dropdowns — nothing else. Server code uses the service-role key.
+- The portable schema and CI stay vanilla-PostgreSQL clean; Supabase-specific
+  SQL is isolated under `db/supabase/`.
+
+If the platform must later standardize on Airtable, the Node API (`services/api`)
+is the natural place for a server-side Airtable writer; the intake table and
+form remain unchanged.

@@ -1,0 +1,32 @@
+name: Web CI
+
+# Typechecks and builds the alpha frontend on changes.
+on:
+  pull_request:
+    paths:
+      - 'web/**'
+      - '.github/workflows/web.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'web/**'
+      - '.github/workflows/web.yml'
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Typecheck & build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Install dependencies
+        working-directory: web
+        run: npm ci
+      - name: Build (typecheck + bundle)
+        working-directory: web
+        run: npm run build
